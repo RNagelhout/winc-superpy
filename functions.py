@@ -9,10 +9,16 @@ import numpy as np
 df_bought = pd.read_csv ('./data/bought.csv', parse_dates=["purchase_date", "expiration_date"], date_format="%Y%m%d")
 df_sold = pd.read_csv ('./data/sold.csv', parse_dates=["selling_date"], date_format="%Y%m%d")
 
+def currentDay():
+    with open("./data/date.txt", "r+") as today:
+        current_day = today.read()
+        return current_day
+current_date = currentDay()
+
 # Different fieldnames for the overview
-fieldnames = ["product_id","product_number","product_name","product_amount","purchase_date","purchase_price","expiration_date"]
-fieldnames_sold = ["product_id","product_number","product_name","product_amount","purchase_price","selling_date", "selling_price"]
-fieldnames_revenue = ["product_id","product_number","product_name","product_amount","purchase_price","selling_date", "selling_price", "Total_product_revenue"]
+fieldnames = ["product_id","product_name","product_amount","purchase_price","expiration_date","purchase_date"]
+fieldnames_sold = ["product_id","product_name","product_amount","purchase_price", "selling_price","selling_date"]
+fieldnames_revenue = ["product_id","product_name","product_amount","purchase_price","selling_date", "selling_price", "Total_product_revenue"]
 
 # CHANGING DATE TODAY
 def dateToday(new_date):
@@ -25,32 +31,55 @@ def dateToday(new_date):
     except ValueError:
         return "Incorrect data format, should be YYYY-MM-DD."
 
+# ADVANCING DATE TODAY WITH AMOUNT OF DAYS
+def advanceDate(add_days):
+    try:
+        with open("./data/date.txt", "r+") as today:
+            current_day = today.read()
+            new_date = datetime.strptime(current_day, "%Y-%m-%d") + timedelta(days=add_days)
+            new_date = datetime.strftime(new_date, "%Y-%m-%d")
+            with open("./data/date.txt", "w+") as today:
+                today.write(new_date)
+                today.close()
+        return (f"Changed the date of today to {new_date}.")    
+    except ValueError:
+        return "Incorrect data format, should be of the type integer."
+    
 # BUYING A PRODUCT:
 # Function for adding a product to bought.csv. It will increase the amount when the product exist or 
 # if the product does not exist, it will create a new row.
-def addNewProduct(product_number, product_name,  product_amount, purchase_date, purchase_price, expiration_date):
-    max_id = df_bought['product_id'].max()
+def addNewProduct(product_name, product_amount, purchase_price, expiration_date, purchase_date="2023-12-01"):
+    
     try:
-        datetime.strptime(purchase_date, "%Y-%m-%d")
+        if purchase_date:
+            purch_date = purchase_date
+        else:  
+            with open("./data/date.txt", "r+") as today:
+                current_day = today.read()
+                purch_date = current_day
         datetime.strptime(expiration_date, "%Y-%m-%d")
+        max_id = df_bought['product_id'].max() 
+        if np.isnan(max_id):
+            max_id = 0
+        else: max_id = df_bought['product_id'].max()   
         with open('./data/bought.csv', 'a', newline='') as bought_file:
-            if product_number in df_bought.values:
+            if product_name in df_bought.values:
                 csv_reader = pd.read_csv ('./data/bought.csv')
-                get_amount = csv_reader[csv_reader["product_number"] == product_number].product_amount
+                get_amount = csv_reader[csv_reader["product_name"] == product_name].product_amount
                 new_amount = get_amount + product_amount
-                get_index = csv_reader[csv_reader["product_number"] == product_number].index.values
+                get_index = csv_reader[csv_reader["product_name"] == product_name].index.values
                 csv_reader.loc[get_index, 'product_amount'] = new_amount
                 csv_reader.to_csv("./data/bought.csv", index=False)
                 outcome = (f"You've added {product_amount} {product_name} to bought.csv.")
+                bought_file.close
             else:
                 csv_writer = csv.DictWriter(bought_file, fieldnames=fieldnames)
-                new_transaction = {'product_number': product_number}
+                new_transaction = {'product_name': product_name}
                 new_transaction['product_id'] = max_id+1
-                new_transaction['product_name'] = product_name
                 new_transaction['product_amount'] = product_amount
-                new_transaction['purchase_date'] = purchase_date
                 new_transaction['purchase_price'] = purchase_price
                 new_transaction['expiration_date'] = expiration_date
+                new_transaction['purchase_date'] = purch_date
                 csv_writer.writerow(new_transaction)
                 bought_file.close  
                 outcome = (f"You've added {product_amount} {product_name} to bought.csv.")
@@ -61,91 +90,108 @@ def addNewProduct(product_number, product_name,  product_amount, purchase_date, 
 # SELLING A PRODUCT:
 # Function for selling a product. It will add the product and amount to sold.csv. 
 # It will increase the amount when the product exist or if the product does not exist, it will create a new row. and reduce the amount in bought.csv.
-def sellProduct(product_number, product_amount, selling_date, selling_price):
+def sellProduct(product_name, product_amount, selling_price, selling_date="2023-12-01"):
     try:
-        datetime.strptime(selling_date, "%Y-%m-%d")
+        if selling_date:
+            sell_date = datetime.strftime(selling_date,"%Y-%m-%d") 
+        else:  
+            with open("./data/date.txt", "r+") as today:
+                current_day = today.read()
+                sell_date = current_day    
         max_id = df_sold['product_id'].max()
-        if product_number in df_bought.values:
+        if np.isnan(max_id):
+            max_id = 0
+        else: max_id = df_sold['product_id'].max()
+        if product_name in df_bought.values:
             csv_reader = pd.read_csv ('./data/bought.csv')
-            get_index = csv_reader[csv_reader["product_number"] == product_number].index.values
-            get_product_name = csv_reader[csv_reader["product_number"] == product_number].product_name
-            get_amount = csv_reader.loc[csv_reader["product_number"] == product_number].product_amount.values
-            if get_amount < product_amount:
-                print("The amount is higher then the current stock, please check your input.")
+            get_index = csv_reader[csv_reader["product_name"] == product_name].index.values
+            get_product_name = csv_reader[csv_reader["product_name"] == product_name].product_name
+            get_amount = csv_reader.loc[csv_reader["product_name"] == product_name].product_amount.values
+            get_expiration_date = csv_reader[csv_reader["product_name"] == product_name].expiration_date.values[0]
+            sell_d = datetime.strptime(sell_date,"%Y-%m-%d")
+            get_p_expiration_date = datetime.strptime(get_expiration_date,"%Y-%m-%d")
+            if get_p_expiration_date < sell_d:
+                total_days_expired = get_p_expiration_date - sell_d
+                outcome = (f"The expirationday for {product_name} was {get_expiration_date}. That means that this product is {total_days_expired.days} days expired, you can't sell this product!")
+            elif get_amount < product_amount:
+                outcome = ("The amount is higher then the current stock, please check your input.")
             elif get_amount == product_amount:
-                get_index = csv_reader[csv_reader["product_number"] == product_number].index.values
+                get_index = csv_reader[csv_reader["product_name"] == product_name].index.values
                 new_amount = get_amount - product_amount     
                 csv_reader.loc[get_index, 'product_amount'] = new_amount
                 csv_reader.to_csv("./data/bought.csv", index=False)
                 with open('./data/sold.csv', 'a', newline='') as sold_file:
-                    if product_number in df_sold.values:
+                    if product_name in df_sold.values:
                         csv_reader = pd.read_csv ('./data/sold.csv')
-                        get_amount = csv_reader[csv_reader["product_number"] == product_number].product_amount
+                        get_amount = csv_reader[csv_reader["product_name"] == product_name].product_amount
                         new_amount = get_amount + product_amount
-                        get_index = csv_reader[csv_reader["product_number"] == product_number].index.values
+                        get_index = csv_reader[csv_reader["product_name"] == product_name].index.values
                         csv_reader.loc[get_index, 'product_amount'] = new_amount
                         csv_reader.to_csv("./data/sold.csv", index=False)
                     else:    
                         csv_writer = csv.DictWriter(sold_file, fieldnames=fieldnames_sold)
-                        new_transaction = {'product_number': product_number}
+                        new_transaction = {'product_name': product_name}
                         new_transaction['product_id'] = max_id+1
-                        new_transaction['product_name'] = get_product_name.values[0]
                         new_transaction['product_amount'] = product_amount
-                        new_transaction['selling_date'] = selling_date
+                        new_transaction['selling_date'] = sell_date
                         new_transaction['selling_price'] = selling_price
                         csv_writer.writerow(new_transaction)
                         sold_file.close  
                 outcome = (f"You've added {product_amount} {get_product_name.values[0]} to sold.csv")
             else:
                 csv_reader = pd.read_csv ('./data/bought.csv')
-                get_amount = csv_reader[csv_reader["product_number"] == product_number].product_amount
+                get_amount = csv_reader[csv_reader["product_name"] == product_name].product_amount
+                get_purchase_price = csv_reader[csv_reader["product_name"] == product_name].purchase_price.values[0]
                 new_amount = get_amount - product_amount
-                get_index = csv_reader[csv_reader["product_number"] == product_number].index.values
+                get_index = csv_reader[csv_reader["product_name"] == product_name].index.values
                 csv_reader.loc[get_index, 'product_amount'] = new_amount
                 csv_reader.to_csv("./data/bought.csv", index=False)
                 with open('./data/sold.csv', 'a', newline='') as sold_file:
-                    if product_number in df_sold.values:
+                    if product_name in df_sold.values:
                         csv_reader = pd.read_csv ('./data/sold.csv')
-                        get_amount = csv_reader[csv_reader["product_number"] == product_number].product_amount
+                        get_amount = csv_reader[csv_reader["product_name"] == product_name].product_amount
                         new_amount = get_amount + product_amount
-                        get_index = csv_reader[csv_reader["product_number"] == product_number].index.values
+                        get_index = csv_reader[csv_reader["product_name"] == product_name].index.values
                         csv_reader.loc[get_index, 'product_amount'] = new_amount
                         csv_reader.to_csv("./data/sold.csv", index=False)
                         outcome = (f"You've added {get_amount} {get_product_name.values[0]} to sold.csv.")
                     else:    
                         csv_writer = csv.DictWriter(sold_file, fieldnames=fieldnames_sold)
-                        new_transaction = {'product_number': product_number}
+                        new_transaction = {'product_name': product_name}
                         new_transaction['product_id'] = max_id+1
-                        new_transaction['product_name'] = get_product_name.values[0]
                         new_transaction['product_amount'] = product_amount
-                        new_transaction['selling_date'] = selling_date
+                        new_transaction['purchase_price'] = get_purchase_price
+                        new_transaction['selling_date'] = sell_date
                         new_transaction['selling_price'] = selling_price
                         csv_writer.writerow(new_transaction)
                         sold_file.close  
                 outcome = (f"You've added {product_amount} {get_product_name.values[0]} to sold.csv")  
+            return outcome
+        else:
+            outcome = (f"{product_name} does not exist, please check your input.")
             return outcome
     except ValueError:
         return "Incorrect data format for selling_date, should be YYYY-MM-DD."
 
 # REMOVING A PRODUCT:
 # Function for removing an product from a selected csv.file 
-def removeProduct(csv_file, product_number):
+def removeProduct(csv_file, product_name):
     df_sold = pd.read_csv ('./data/sold.csv', parse_dates=["selling_date"], date_format="%Y%m%d")
     df_bought = pd.read_csv ('./data/bought.csv', parse_dates=["purchase_date", "expiration_date"], date_format="%Y%m%d")
     if csv_file == "bought":
-        if product_number in df_bought.values:
-            get_index = df_bought[df_bought['product_number'] == product_number].index.values[0]
+        if product_name in df_bought.values:
+            get_index = df_bought[df_bought['product_name'] == product_name].index.values[0]
             df_bought.drop(get_index, inplace=True)
             df_bought.to_csv('./data/bought.csv', index=False)
-            outcome = (f"Product deleted {product_number} from bought.csv!")
+            outcome = (f"Product deleted {product_name} from bought.csv!")
         else:
             outcome = print("The productnumber does not exist in bought.csv, please check your input!")    
     elif csv_file == "sold":
-        if product_number in df_sold.values:
-            get_index = df_sold[df_sold['product_number'] == product_number].index.values[0]
+        if product_name in df_sold.values:
+            get_index = df_sold[df_sold['product_name'] == product_name].index.values[0]
             df_sold.drop(get_index, inplace=True)
             df_sold.to_csv('./data/sold.csv', index=False)
-            outcome =  (f"Product deleted {product_number} from sold.csv!")
+            outcome =  (f"Product deleted {product_name} from sold.csv!")
         else:
             outcome = "The productnumber does not exist in sold.csv, please check your input!"
     else: 

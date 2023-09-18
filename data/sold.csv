@@ -1,6 +1,3 @@
-product_id,product_number,product_name,product_amount,purchase_price,selling_date,selling_price
-1,258656,Sla,161,5.14,2023-08-26,20.5
-2,258657,Aardappels,5,3.48,2023-05-25,8.5
-4,258653,Watermeloen,25,9.12,2023-08-26,20.5
-5,258651,Peren,10,1.11,2023-08-25,3.25
-6,258652,Appels,3,2.10,2023-08-25,4.75
+product_id,product_name,product_amount,purchase_price,selling_price,selling_date
+1,Sla,8,5.14,10.25,2023-08-11
+2,Komkommer,1,1.14,20.5,2023-03-25

@@ -1,8 +1,7 @@
-product_id,product_number,product_name,product_amount,purchase_date,purchase_price,expiration_date
-1,258651,Peren,10,2023-01-17,1.11,2023-05-15
-2,258652,Appels,3,2023-01-17,2.1,2023-05-15
-3,258653,Watermeloen,25,2023-01-17,9.12,2023-08-15
-4,258654,Boerenkool,220,2023-01-17,8.24,2023-10-15
-5,258655,Spruiten,682,2023-01-17,5.12,2023-09-15
-7,258656,Sla,190,2023-01-17,5.14,2023-05-15
-8,258657,Aardappels,23,2023-01-17,3.48,2023-05-15
+product_id,product_name,product_amount,purchase_price,expiration_date,purchase_date
+1,vest,25,10.14,2023-03-25,2023-01-20
+2,Sla,14,5.14,2023-08-15,2023-08-11
+3,Komkommer,4,1.14,2023-10-25,2023-01-20
+4,Peper,17,0.5,2023-12-25,2023-01-11
+5,Pasta,25,0.34,2023-12-23,2023-01-20
+6,Brood,10,1.14,2023-11-20,2023-10-10
